@@ -1978,9 +1978,10 @@ impl PlatformWindow for WaylandWindow {
     }
 
     fn toggle_fullscreen(&self) {
-        let state = self.borrow();
-        if let Some(toplevel) = state.surface_state.toplevel() {
-            if !state.fullscreen {
+        let mut state = self.borrow_mut();
+        if let Some(toplevel) = state.surface_state.toplevel().cloned() {
+            state.fullscreen = !state.fullscreen;
+            if state.fullscreen {
                 toplevel.set_fullscreen(None);
             } else {
                 toplevel.unset_fullscreen();

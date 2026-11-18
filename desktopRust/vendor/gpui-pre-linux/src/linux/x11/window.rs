@@ -1683,14 +1683,20 @@ impl PlatformWindow for X11Window {
     }
 
     fn toggle_fullscreen(&self) {
-        let state = self.0.state.borrow();
-        self.set_wm_hints(
-            || "X11 SendEvent to fullscreen a window failed.",
-            WmHintPropertyState::Toggle,
-            state.atoms._NET_WM_STATE_FULLSCREEN,
-            xproto::AtomEnum::NONE.into(),
-        )
-        .log_err();
+        let atom = self.0.state.borrow().atoms._NET_WM_STATE_FULLSCREEN;
+        let sent = self
+            .set_wm_hints(
+                || "X11 SendEvent to fullscreen a window failed.",
+                WmHintPropertyState::Toggle,
+                atom,
+                xproto::AtomEnum::NONE.into(),
+            )
+            .log_err()
+            .is_some();
+        if sent {
+            let mut state = self.0.state.borrow_mut();
+            state.fullscreen = !state.fullscreen;
+        }
     }
 
     fn is_fullscreen(&self) -> bool {
