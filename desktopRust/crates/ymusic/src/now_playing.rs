@@ -158,6 +158,9 @@ pub struct NowPlaying {
     /// A video control held keyboard focus at the last render: the controls stay up meanwhile.
     keyboard_in_controls: Cell<bool>,
     fullscreen: bool,
+    /// The window has actually been full screen since full screen was entered: Wayland and X11
+    /// confirm the request a roundtrip late, and those first frames must not end full screen.
+    fullscreen_confirmed: bool,
     /// The JVM `videoFillScreen`: full screen takes the whole screen as the picture; never saved, off
     /// whenever full screen ends.
     video_fill: bool,
@@ -438,6 +441,7 @@ impl NowPlaying {
             overlay_focus: FocusList::new(None),
             keyboard_in_controls: Cell::new(false),
             fullscreen: false,
+            fullscreen_confirmed: false,
             video_fill: false,
             live_rows: Default::default(),
             _subscriptions: subscriptions,
@@ -1972,9 +1976,13 @@ impl Render for NowPlaying {
         }
         self.keyboard_in_controls.set(window.last_input_was_keyboard() && self.overlay_focus.has_focus(window));
         let Some(current) = self.playback.read(cx).current().cloned() else { return div().into_any_element() };
-        if self.fullscreen && !window.is_fullscreen() {
+        if window.is_fullscreen() {
+            self.fullscreen = true;
+            self.fullscreen_confirmed = true;
+        } else if self.fullscreen_confirmed {
             self.fullscreen = false;
             self.video_fill = false;
+            self.fullscreen_confirmed = false;
         }
         if self.fullscreen {
             return div()
